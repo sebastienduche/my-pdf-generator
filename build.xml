@@ -11,7 +11,7 @@
             <manifest>
                 <attribute name="Class-Path" value="." />
             </manifest>
-            <fileset dir="./bin">
+            <fileset dir="./bin/production/my-pdf-generator">
             </fileset>
         </jar>
     </target>

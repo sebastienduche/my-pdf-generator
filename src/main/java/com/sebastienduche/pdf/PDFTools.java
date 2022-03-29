@@ -1,4 +1,4 @@
-package com.passwordmanager.pdf;
+package com.sebastienduche.pdf;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -13,14 +13,37 @@ public class PDFTools {
 
     private static final float ROW_HEIGHT = 20f;
     private static final float CELL_MARGIN = 5f;
+    private static final float MAX_WIDTH = 20f;
     private final PDDocument document;
     private final PDFProperties properties;
+    private final PDFPageProperties pageProperties;
     private final boolean withTableHeader;
     private PDPage page;
     private PDPageContentStream content;
 
-    public PDFTools(PDFProperties properties, boolean withTableHeader) throws IOException {
-        this.properties = properties;
+    public PDFTools() throws IOException {
+        this.properties = new PDFProperties();
+        this.pageProperties = new PDFPageProperties(PDType1Font.HELVETICA, properties.getDefaultFontSize());
+        this.withTableHeader = false;
+        document = new PDDocument();
+        page = new PDPage();
+        document.addPage(page);
+        content = new PDPageContentStream(document, page);
+    }
+
+    public PDFTools(String title) throws IOException {
+        this.properties = new PDFProperties(title);
+        this.pageProperties = new PDFPageProperties(PDType1Font.HELVETICA, properties.getDefaultFontSize());
+        this.withTableHeader = false;
+        document = new PDDocument();
+        page = new PDPage();
+        document.addPage(page);
+        content = new PDPageContentStream(document, page);
+    }
+
+    public PDFTools(String title, boolean withTableHeader) throws IOException {
+        this.properties = new PDFProperties(title);
+        this.pageProperties = new PDFPageProperties(PDType1Font.HELVETICA, properties.getDefaultFontSize());
         this.withTableHeader = withTableHeader;
         document = new PDDocument();
         page = new PDPage();
@@ -28,17 +51,53 @@ public class PDFTools {
         content = new PDPageContentStream(document, page);
     }
 
-    public void drawTable(PDFPageProperties pageProperties, List<PDFRow> rows) throws IOException {
+    public PDFTools(PDFProperties properties, boolean withTableHeader) throws IOException {
+        this.properties = properties;
+        this.pageProperties = new PDFPageProperties(PDType1Font.HELVETICA, properties.getDefaultFontSize());
+        this.withTableHeader = withTableHeader;
+        document = new PDDocument();
+        page = new PDPage();
+        document.addPage(page);
+        content = new PDPageContentStream(document, page);
+    }
+
+    public PDFTools(PDFProperties properties, PDFPageProperties pageProperties, boolean withTableHeader) throws IOException {
+        this.properties = properties;
+        this.pageProperties = pageProperties;
+        this.withTableHeader = withTableHeader;
+        document = new PDDocument();
+        page = new PDPage();
+        document.addPage(page);
+        content = new PDPageContentStream(document, page);
+    }
+
+    public void writeData(List<PDFRow> rows) throws IOException {
+        if (properties.getTitle() != null && !properties.getTitle().isBlank()) {
+            addTitle();
+        }
+        drawTable(rows);
+    }
+
+    private void drawTable(List<PDFRow> rows) throws IOException {
         int nbrows = rows.size();
         if (nbrows == 0) {
             return;
         }
         final int nbDatas = nbrows;
         final int cols = rows.get(0).getCellCount();
+        final int columnCount = properties.getColumns().size();
+        if (columnCount != cols) {
+            // Not the same numbers of columns
+            final float totalAvailableColumnWidth = MAX_WIDTH - properties.getTotalColumnWidth();
+            float colWidth = totalAvailableColumnWidth / (cols - columnCount);
+            for (int i = 0; i < (cols - columnCount); i++) {
+                properties.addColumn((int) colWidth, "");
+            }
+        }
         float tableWidth = page.getMediaBox().getWidth() - pageProperties.getMarginLeft() - pageProperties.getMarginRight();
         final float unitColWidth = tableWidth / 19f;
 
-        float y = page.getMediaBox().getHeight() - pageProperties.getStartTop();
+        float y = page.getMediaBox().getHeight() - pageProperties.getPositionFirstLine();
 
         //draw the rows
         float nexty = y;
@@ -74,7 +133,7 @@ public class PDFTools {
         }
 
         //now add the text
-        content.setFont(pageProperties.getFont(), properties.getFontSize());
+        content.setFont(pageProperties.getFont(), properties.getDefaultFontSize());
 
         float textx = pageProperties.getMarginLeft() + CELL_MARGIN;
         float texty = y - 15;
@@ -101,8 +160,8 @@ public class PDFTools {
             page = new PDPage();
             document.addPage(page);
             content = new PDPageContentStream(document, page);
-            pageProperties.setStartTop(pageProperties.getMarginTop());
-            drawTable(pageProperties, rows);
+            pageProperties.setPositionFirstLine(pageProperties.getMarginTop());
+            drawTable(rows);
             content.close();
         }
     }
@@ -124,16 +183,16 @@ public class PDFTools {
         }
     }
 
-    public void addTitle(float marginTop) throws IOException {
+    private void addTitle() throws IOException {
         final String title = properties.getTitle();
         final PDType1Font font = properties.isBoldTitle() ? PDType1Font.HELVETICA_BOLD : PDType1Font.HELVETICA;
-        final int fontSize = properties.getTitleSize();
+        final int fontSize = properties.getTitleFontSize();
         final float titleWidth = font.getStringWidth(title) / 1000 * fontSize;
         final float titleHeight = font.getFontDescriptor().getFontBoundingBox().getHeight() / 1000 * fontSize;
 
         content.beginText();
         content.setFont(font, fontSize);
-        content.newLineAtOffset((page.getMediaBox().getWidth() - titleWidth) / 2, page.getMediaBox().getHeight() - marginTop - titleHeight);
+        content.newLineAtOffset((page.getMediaBox().getWidth() - titleWidth) / 2, page.getMediaBox().getHeight() - properties.getMarginBeforeTitle() - titleHeight);
         content.showText(title);
         content.endText();
     }
@@ -143,39 +202,4 @@ public class PDFTools {
         document.save(file);
         document.close();
     }
-
-	/*public static void main(String args[]) throws IOException, COSVisitorException {
-		PDDocument doc = new PDDocument();
-		PDPage page = new PDPage();
-		doc.addPage( page );
-
-		PDPageContentStream contentStream = new PDPageContentStream(doc, page);
-
-		LinkedList<PDFRow> rows = new LinkedList<PDFRow>();
-		PDFRow row = new PDFRow();
-		for(int j=0; j<6; j++)
-			row.addCell("Header "+j);
-		rows.add(row);
-		row.setFont(PDType1Font.HELVETICA_BOLD, 12);
-		for(int i=0; i<50; i++) {
-			row = new PDFRow();
-			for(int j=0; j<6; j++)
-				row.addCell("Test"+i+" "+j);
-			rows.add(row);
-		}
-
-		PDFPageProperties pageProperties = new PDFPageProperties(30, 20, 20, 20, PDType1Font.HELVETICA, 12);
-		pageProperties.setStartTop(100);
-		PDFProperties properties = new PDFProperties("Titre", 10, 12, true, true);
-		properties.addColumn(0, 2);
-		properties.addColumn(1, 3);
-		properties.addColumn(2, 2);
-		properties.addColumn(3, 3);
-		properties.addColumn(4, 2);
-		properties.addColumn(5, 2);
-		drawTable(doc, page, contentStream, pageProperties, properties, rows, true);
-		contentStream.close();
-		doc.save("test.pdf");
-	}
-*/
 }

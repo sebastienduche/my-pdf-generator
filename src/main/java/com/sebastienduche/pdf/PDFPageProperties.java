@@ -1,17 +1,6 @@
-package com.passwordmanager.pdf;
+package com.sebastienduche.pdf;
 
 import org.apache.pdfbox.pdmodel.font.PDFont;
-
-/**
- * <p>Titre : Cave à vin</p>
- * <p>Description : Votre description</p>
- * <p>Copyright : Copyright (c) 2016</p>
- * <p>Société : Seb Informatique</p>
- *
- * @author Sébastien Duché
- * @version 0.2
- * @since 08/06/18
- */
 
 public class PDFPageProperties {
 
@@ -21,16 +10,23 @@ public class PDFPageProperties {
   private float marginRight;
   private PDFont font;
   private int fontSize;
-  private float startTop;
+  private float positionFirstLine;
 
-  public PDFPageProperties(float marginTop, float marginBottom, float marginLeft, float marginRight, PDFont font, int fontSize) {
+  public PDFPageProperties(PDFont font, int fontSize) {
+    this.font = font;
+    this.fontSize = fontSize;
+    marginTop = marginBottom = marginLeft = marginRight = 20;
+    positionFirstLine = 40;
+  }
+
+  public PDFPageProperties(float marginTop, float marginBottom, float marginLeft, float marginRight, PDFont font, int fontSize, int positionFirstLine) {
     this.marginTop = marginTop;
     this.marginBottom = marginBottom;
     this.marginLeft = marginLeft;
     this.marginRight = marginRight;
     this.font = font;
     this.fontSize = fontSize;
-    startTop = marginTop;
+    this.positionFirstLine = positionFirstLine;
   }
 
   float getMarginTop() {
@@ -81,11 +77,11 @@ public class PDFPageProperties {
     this.fontSize = fontSize;
   }
 
-  float getStartTop() {
-    return startTop;
+  float getPositionFirstLine() {
+    return positionFirstLine;
   }
 
-  public void setStartTop(float startTop) {
-    this.startTop = startTop;
+  public void setPositionFirstLine(float positionFirstLine) {
+    this.positionFirstLine = positionFirstLine;
   }
 }
